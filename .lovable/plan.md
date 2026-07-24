@@ -1,71 +1,69 @@
-# NETA-KEN : ABSOLUTE CINEMA — Build Plan
+# Neta Ken — 8-Fighter GLB Rebuild
 
-This is a very large spec (23 characters, full 3D engine, AI, audio, mobile + APK export). I'll build a solid **playable MVP foundation** in this turn, then iterate. Trying to ship every character + special effect + audio track in one pass would produce broken code.
+## Roster (8 only, from your GLB uploads)
 
-## Important upfront notes
+1. Narendra Modi
+2. Rahul Gandhi
+3. Dhruv Rathee
+4. ACP Pradyuman
+5. M. S. Dhoni
+6. Virat Kohli
+7. Salman Bhai
+8. Putin
 
-1. **Real face photos of real people (politicians, celebrities) — I will NOT fetch or embed real photographs.** That's a likeness/rights problem and I have no licensed source. Instead each fighter gets a **stylized PS1-style procedural face texture** (canvas-generated: skin tone, hair, facial hair, glasses, headwear cues) keyed to the character. The `textureManager` is structured so you can later drop in your own licensed portrait URLs — just replace the `portraitUrl` field per fighter.
-2. **Parody roster is kept** as names + stats + special-attack metadata. Visual identity is conveyed through body proportions, outfit colors, and headwear/accessory geometry (Modi jacket, Kejriwal muffler, Dhoni #7 jersey, Kim Mao suit, Trump red tie, etc.) — matching the "real body archetypes + outfits" requirement without photo likenesses.
-3. **Audio**: Howler.js wired up with synthesized placeholder SFX (WebAudio-generated hits, announcer via SpeechSynthesis for "READY… FIGHT!… K.O.!"). Drop real mp3s into `/public/audio/` later.
-4. **Capacitor export**: I'll add config + npm scripts, not run the Android build (needs Android Studio).
+The previous 23-fighter procedural roster is removed.
 
-## Scope for this turn (MVP)
+## Character Select
 
-**In:**
-- Full project structure exactly as specified (all listed files created).
-- Menus: GameModeSelect → CharacterSelect (all 23 fighters, grid, preview card, stats, special-attack description) → Stage.
-- 3D arena (Stage.jsx) with PS1-style flat lighting, low-poly floor, skybox gradient.
-- FighterMesh.jsx: procedural low-poly body from `bodyPresets` (head, torso, arms, legs, outfit layers, headwear) with per-fighter proportions and outfit colors. Face texture generated procedurally per fighter.
-- Combat engine: bounding-box hitboxes, LP/HP/LK/HK/SP moves, block, health, rage gauge, combo counter, KO with slow-mo freeze, floating damage numbers.
-- CPU AI engine with Easy/Medium/Hard, spatial state machine (far/mid/close), special trigger at 100% rage.
-- HUD: dual health bars, rage gauges, combo, round pips, timer, touch controls (D-pad + LP/HP/LK/HK/SP) on mobile, keyboard (WASD + J/K/L/I + Space for SP) on desktop.
-- Special-attack FX system: particle/shockwave/beam primitives, each character's special dispatches a themed effect (bullet train, bulldozer silhouette, electric ring, ICBM, dragon, chariot, etc.) built from primitive geometry + particles + camera shake.
-- Arcade mode (best of 3 rounds vs CPU) + Training mode (dummy blocks/stands).
-- Capacitor config + build scripts for APK export.
+Rebuilt to match `Character selection screen.jpg` from your zip — neon high-tech frame cards, P1 vs P2/AI slots, 2×4 grid on mobile / 4×2 on desktop. Tapping a card highlights it, plays the fighter's GLB `Idle`/preview animation live in a small 3D viewport, and shows stats (Power/Speed/Defense/Special) plus special-move name. Confirming transitions through a high-energy "VERSUS" screen into stage select.
 
-**Deferred (call out to user, add in follow-ups):**
-- Real portrait photos (needs licensed URLs from you).
-- Real music tracks + voice lines (drop-in mp3s).
-- Per-character animation rigs (MVP uses procedural pose tweens, not skeletal animation).
-- Fine-tuned move frame data / balance pass.
+## Arenas (5, from `Neta_ken_stages.zip`)
 
-## File layout
+Each arena renders the reference image as a distant painted backdrop plus low-poly 3D foreground props tinted to match — Tekken-style 2.5D fight plane with detailed skybox.
 
-```text
-src/
-  routes/index.tsx                       game shell (mounts <Game/>)
-  game/
-    Game.tsx                             top-level state machine (menu/select/fight/result)
-    components/
-      UI/
-        GameModeSelect.jsx
-        CharacterSelect.jsx
-        ArcadeHUD.jsx
-        TouchControls.jsx
-        ResultScreen.jsx
-      3D/
-        Stage.jsx
-        FighterMesh.jsx
-        SpecialFX.jsx
-        DamageNumbers.jsx
-    utils/
-      bodyPresets.js                     23 fighters: height/width/waist/outfit/headwear/colors
-      textureManager.js                  procedural face canvas + portrait URL slots
-      combatEngine.js                    moves, hitboxes, damage, rage, combos, KO
-      cpuAiEngine.js                     distance-based state machine + difficulty
-      audioEngine.js                     Howler wrapper + announcer
-      input.js                           keyboard + touch → unified input frame
-      roster.js                          23 fighters metadata (stats, special name/desc, palette)
-capacitor.config.ts                      Android export config
-```
+1. **Japanese Temple** — `diego-rodrigues-cenario-japones-1.jpg`. Red torii gate, wooden temple, stone courtyard, lantern glow, falling sakura particles.
+2. **Quixotic Temple** — `Aof3quixotictemple1bg.webp`. Ancient arches, floating stone pillars, glowing rune tiles, blue/purple mystic fog.
+3. **Lost Cathedral** — `lost-cathedral.avif`. Ruined gothic nave, broken stained glass shafts of light, dust motes, cold stone floor.
+4. **Hell Circle** — `game-battle-arena-background-with-hell-landscape-...jpg`. Suspended stone platform with hanging chains, orange ember particles, lava glow underlight.
+5. **Neon Cage** — `mma-ring-boxing-background-octagon...avif`. Octagon cage ring under red neon spotlights, crowd silhouette backdrop, volumetric haze.
 
-## Controls
+Stage-select screen (after character select, before VERSUS) shows all 5 as neon preview tiles.
 
-- Desktop: `A/D` move, `W` jump, `S` crouch/block, `J` LP, `K` HP, `L` LK, `I` HK, `Space` SP.
-- Mobile: on-screen D-pad left + 5 action buttons right (LP, HP, LK, HK, SP).
+## Mobile Inputs & GLB Animation
 
-## Deliverable
+- **Virtual joystick** bottom-left (forward/back/jump/crouch; back-hold = block).
+- **4 action buttons** bottom-right: LP, HP, LK, HK.
+- `THREE.AnimationMixer` per fighter, driven by input state. Clip mapping (fuzzy name match on `gltf.animations`, fallback to `Idle`): `Idle`, `Walk`, `Jab`(LP), `Cross`(HP), `LowKick`(LK), `HighKick`(HK), `Special1`, `Special2`, `HitReact`, `Knockdown`, `Block`. 0.1s crossfade.
+- **Combos & specials:**
+  - `LP → HP → HK` within 500ms → 3-hit combo, extra damage, screen shake, hit-stop.
+  - `↓ + HK` → `Special2` sweep kick.
+  - Double-tap HP or swipe-forward + HP → `Special1` projectile/energy surge (costs full rage).
+- **Skeletal hitboxes:** during a move's active frames, the attacking hand/foot bone's world position is AABB-tested against opponent torso bone → hit → damage + `HitReact` + sparks + brief hit-stop.
 
-A playable MVP you can walk end-to-end: pick mode → pick fighter → pick CPU → 3D fight with HUD, rage, specials, KO, result → rematch/menu. Everything is modular so adding real assets is drop-in.
+## HUD & Camera
 
-I'll build this now.
+- Dual health bars, round timer, super/rage gauge, combo counter, touch overlay.
+- Dynamic 2.5D camera keeps both fighters framed, zooms in for specials/KO with slow-mo.
+- Round flow: Character Select → Stage Select → VERSUS → Round Start → Combat → KO/Victory.
+
+## Asset handling
+
+GLB files are 15–17 MB each (~130 MB total) and stage images are large — all go to Lovable Assets (CDN). `.asset.json` pointers live under `src/assets/fighters/` and `src/assets/stages/`. `useGLTF` and stage backdrops load directly from CDN URLs. Nothing binary is committed to the repo.
+
+## Files touched
+
+- **New:** `src/game/components/3D/FighterGLB.jsx`, `src/game/components/3D/DynamicCamera.jsx`, `src/game/components/3D/stages/{JapaneseTemple,QuixoticTemple,LostCathedral,HellCircle,NeonCage}.jsx`, `src/game/components/UI/{StageSelect,VersusScreen,VirtualJoystick}.jsx`, `src/game/utils/{animationController,comboBuffer}.js`, `src/assets/fighters/*.glb.asset.json`, `src/assets/stages/*.asset.json`.
+- **Rewritten:** `src/game/utils/roster.js` (8 entries + GLB URLs + clip hints + stats), `src/game/Game.tsx` (adds stage-select + VS steps, swaps FighterMesh for FighterGLB, dynamic camera), `src/game/components/UI/CharacterSelect.jsx` (neon 8-card grid with live GLB preview, styled after your reference), `src/game/components/UI/TouchControls.jsx` (joystick + 4 buttons).
+- **Updated:** `src/game/utils/combatEngine.js` (skeletal-hitbox hook points, combo bonuses, hit-stop), `src/game/utils/input.js` (joystick vector + gesture events).
+- **Removed:** `FighterMesh.jsx`, `bodyPresets.js`, procedural face/portrait code in `textureManager.js`.
+
+## Technical notes
+
+- GLB loading via `useGLTF` from `@react-three/drei` with `SkeletonUtils.clone` so P1/P2 can safely share one GLB.
+- Clip resolution is case-insensitive substring match; missing clips fall back to `Idle`.
+- Hitbox sampling uses `bone.getWorldPosition()` per frame during active windows — no physics engine.
+- All 8 GLBs preload during character select with a progress bar so combat starts instantly.
+- Stage backdrops are the reference image on a large curved plane; foreground props are simple boxes/cylinders + particles + tinted lights to sell depth.
+- Everything stays client-side; Capacitor Android export path is unchanged.
+
+Confirm and I'll build it.
