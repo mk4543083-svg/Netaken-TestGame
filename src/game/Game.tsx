@@ -1,27 +1,32 @@
-// Game.tsx — top-level state machine. Menu → Select P1 → Select CPU → Fight → Result.
-import { useEffect, useMemo, useRef, useState } from "react";
+// Game.tsx — top-level state machine.
+// Menu → Select P1 → Select P2 → Select Stage → Versus → Fight → Result.
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import GameModeSelect from "./components/UI/GameModeSelect";
 import CharacterSelect from "./components/UI/CharacterSelect";
+import StageSelect from "./components/UI/StageSelect";
+import VersusScreen from "./components/UI/VersusScreen";
 import ArcadeHUD from "./components/UI/ArcadeHUD";
 import TouchControls from "./components/UI/TouchControls";
 import ResultScreen from "./components/UI/ResultScreen";
-import Stage from "./components/3D/Stage";
-import FighterMesh from "./components/3D/FighterMesh";
+import ArenaStage from "./components/3D/ArenaStage";
+import FighterGLB from "./components/3D/FighterGLB";
 import SpecialFX from "./components/3D/SpecialFX";
 import DamageNumbers from "./components/3D/DamageNumbers";
 import { createInputController } from "./utils/input";
 import { makeFighter, stepFighter, ROUND_TIME } from "./utils/combatEngine";
 import { makeCpuState, cpuTick } from "./utils/cpuAiEngine";
 import { Audio } from "./utils/audioEngine";
+import { STAGES } from "./utils/stages";
 
-type Screen = "menu" | "selectP1" | "selectP2" | "fight" | "result";
+type Screen = "menu" | "selectP1" | "selectP2" | "selectStage" | "versus" | "fight" | "result";
 
 export default function Game() {
   const [screen, setScreen] = useState<Screen>("menu");
   const [config, setConfig] = useState<any>({ mode: "arcade", difficulty: "medium" });
   const [p1Fighter, setP1Fighter] = useState<any>(null);
   const [p2Fighter, setP2Fighter] = useState<any>(null);
+  const [stage, setStage] = useState<any>(STAGES[0]);
   const [rematchKey, setRematchKey] = useState(0);
   const [winnerMeta, setWinnerMeta] = useState<any>(null);
 
@@ -35,22 +40,31 @@ export default function Game() {
   );
   if (screen === "selectP2") return (
     <CharacterSelect label={config.mode === "training" ? "Dummy" : "CPU Opponent"}
-      onPick={(f: any) => { setP2Fighter(f); setScreen("fight"); }}
+      onPick={(f: any) => { setP2Fighter(f); setScreen("selectStage"); }}
       onBack={() => setScreen("selectP1")} />
+  );
+  if (screen === "selectStage") return (
+    <StageSelect p1={p1Fighter} p2={p2Fighter}
+      onPick={(s: any) => { setStage(s); setScreen("versus"); }}
+      onBack={() => setScreen("selectP2")} />
+  );
+  if (screen === "versus") return (
+    <VersusScreen p1={p1Fighter} p2={p2Fighter} stage={stage}
+      onDone={() => setScreen("fight")} />
   );
   if (screen === "fight") return (
     <FightScene key={rematchKey}
-      config={config} p1Meta={p1Fighter} p2Meta={p2Fighter}
+      config={config} p1Meta={p1Fighter} p2Meta={p2Fighter} stage={stage}
       onEnd={(winner: any) => { setWinnerMeta(winner); setScreen("result"); }} />
   );
   return (
     <ResultScreen winner={winnerMeta}
-      onRematch={() => { setRematchKey((k) => k + 1); setScreen("fight"); }}
+      onRematch={() => { setRematchKey((k) => k + 1); setScreen("versus"); }}
       onMenu={() => setScreen("menu")} />
   );
 }
 
-function FightScene({ config, p1Meta, p2Meta, onEnd }: any) {
+function FightScene({ config, p1Meta, p2Meta, stage, onEnd }: any) {
   const inputRef = useRef<any>(null);
   const [uiTick, setUiTick] = useState(0);
   const stateRef = useRef<any>({
@@ -71,7 +85,6 @@ function FightScene({ config, p1Meta, p2Meta, onEnd }: any) {
     slowMoT: 0,
   });
 
-  // input controller
   useEffect(() => {
     inputRef.current = createInputController();
     Audio.say("Ready");
@@ -79,7 +92,6 @@ function FightScene({ config, p1Meta, p2Meta, onEnd }: any) {
     return () => inputRef.current?.dispose();
   }, []);
 
-  // Fixed step game loop (~60Hz)
   useEffect(() => {
     let raf = 0;
     let last = performance.now();
@@ -106,13 +118,15 @@ function FightScene({ config, p1Meta, p2Meta, onEnd }: any) {
     <div className="relative w-full h-[100dvh] bg-black overflow-hidden select-none">
       <Canvas shadows dpr={[1, 1.5]} camera={{ position: [0, 2.4, 7.5], fov: 45 }}>
         <SceneShake state={s} />
-        <Stage />
-        <group position={[s.p1.x, s.p1.y, 0]} rotation={[0, s.p1.facing > 0 ? Math.PI / 2 : -Math.PI / 2, 0]}>
-          <FighterMesh fighter={p1Meta} state={s.p1} />
-        </group>
-        <group position={[s.p2.x, s.p2.y, 0]} rotation={[0, s.p2.facing > 0 ? Math.PI / 2 : -Math.PI / 2, 0]}>
-          <FighterMesh fighter={p2Meta} state={s.p2} />
-        </group>
+        <Suspense fallback={null}>
+          <ArenaStage stage={stage} />
+          <group position={[s.p1.x, s.p1.y, 0]} rotation={[0, s.p1.facing > 0 ? Math.PI / 2 : -Math.PI / 2, 0]}>
+            <FighterGLB fighter={p1Meta} state={s.p1} />
+          </group>
+          <group position={[s.p2.x, s.p2.y, 0]} rotation={[0, s.p2.facing > 0 ? Math.PI / 2 : -Math.PI / 2, 0]}>
+            <FighterGLB fighter={p2Meta} state={s.p2} />
+          </group>
+        </Suspense>
         {s.fx.map((fx: any) => (
           <SpecialFX key={fx.id} fx={fx.fx} from={fx.from} toward={fx.toward}
             onDone={() => { s.fx = s.fx.filter((x: any) => x.id !== fx.id); }} />
@@ -121,7 +135,7 @@ function FightScene({ config, p1Meta, p2Meta, onEnd }: any) {
       </Canvas>
 
       <ArcadeHUD p1={s.p1} p2={s.p2} timer={s.timer} round={s.round} wins={s.wins} combo={s.combo} />
-      <TouchControls input={inputRef.current || { touchDown() {}, touchUp() {} }} />
+      <TouchControls input={inputRef.current || { touchDown() {}, touchUp() {}, setStickVector() {} }} />
 
       {s.phase === "ready" && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -135,17 +149,22 @@ function FightScene({ config, p1Meta, p2Meta, onEnd }: any) {
   );
 }
 
-// Camera shake driven by state.shake
+// Dynamic 2.5D camera + shake driven by state.shake.
 function SceneShake({ state }: any) {
   const { camera } = useThree();
   const base = useMemo(() => camera.position.clone(), [camera]);
   useFrame(() => {
-    const s = state.shake || 0;
-    camera.position.set(base.x + (Math.random() - 0.5) * s, base.y + (Math.random() - 0.5) * s, base.z);
+    const midX = (state.p1.x + state.p2.x) / 2;
+    const gap = Math.abs(state.p1.x - state.p2.x);
+    const zoom = state.slowMoT > 0 ? 5.5 : Math.min(9, 5.5 + gap * 0.4);
+    const shake = state.shake || 0;
+    camera.position.set(
+      base.x + midX * 0.5 + (Math.random() - 0.5) * shake,
+      base.y + (Math.random() - 0.5) * shake,
+      zoom,
+    );
     if (state.shake > 0) state.shake *= 0.85;
     if (state.shake < 0.01) state.shake = 0;
-    // aim between fighters
-    const midX = (state.p1.x + state.p2.x) / 2;
     camera.lookAt(midX, 1.2, 0);
   });
   return null;
@@ -154,7 +173,6 @@ function SceneShake({ state }: any) {
 function tickGame(s: any, input: any, config: any, onEnd: (w: any) => void) {
   if (!input) return;
 
-  // Phase transitions
   if (s.phase === "ready") {
     s.phaseT += 1;
     if (s.phaseT > 120) { s.phase = "fight"; s.phaseT = 0; }
@@ -164,7 +182,6 @@ function tickGame(s: any, input: any, config: any, onEnd: (w: any) => void) {
     s.phaseT += 1;
     if (s.slowMoT > 0) s.slowMoT -= 1;
     if (s.phaseT > 120) {
-      // decide match end or next round
       if (s.wins.p1 >= 2 || s.wins.p2 >= 2 || s.round >= 3) {
         const winnerMeta = s.wins.p1 > s.wins.p2 ? s.p1.meta : s.wins.p2 > s.wins.p1 ? s.p2.meta : null;
         onEnd(winnerMeta);
@@ -183,10 +200,8 @@ function tickGame(s: any, input: any, config: any, onEnd: (w: any) => void) {
   }
   if (s.phase !== "fight") return;
 
-  // Timer
   s.timer -= 1 / 60;
 
-  // Inputs
   const p1Input = input.snapshot();
   const p2Input = config.mode === "training"
     ? { left: false, right: false, up: false, down: false, block: true, LP: false, HP: false, LK: false, HK: false, SP: false }
@@ -196,14 +211,13 @@ function tickGame(s: any, input: any, config: any, onEnd: (w: any) => void) {
   stepFighter(s.p1, p1Input, s.p2, 1, events);
   stepFighter(s.p2, p2Input, s.p1, 1, events);
 
-  // Process events
   for (const ev of events) {
     if (ev.type === "hit") {
       s.dmg.push({ id: ++s.dmgId, x: ev.at.x, y: ev.at.y, dmg: ev.dmg, blocked: ev.blocked });
       s.combo = { side: ev.side === "p1" ? "p2" : "p1", count: ev.combo };
-      s.shake = ev.blocked ? 0.05 : 0.15;
+      s.shake = ev.blocked ? 0.05 : (ev.combo >= 3 ? 0.28 : 0.15);
+      if (ev.combo >= 3 && !ev.blocked) s.slowMoT = Math.max(s.slowMoT, 8); // hit-stop
       ev.blocked ? Audio.block() : (ev.dmg > 8 ? Audio.hitHeavy() : Audio.hitLight());
-      // trim old dmg numbers
       if (s.dmg.length > 20) s.dmg.splice(0, s.dmg.length - 20);
     } else if (ev.type === "special") {
       const who = ev.side === "p1" ? s.p1 : s.p2;
@@ -222,7 +236,6 @@ function tickGame(s: any, input: any, config: any, onEnd: (w: any) => void) {
     }
   }
 
-  // Timer expiry
   if (s.timer <= 0 && s.phase === "fight") {
     if (s.p1.hp > s.p2.hp) s.wins.p1 += 1;
     else if (s.p2.hp > s.p1.hp) s.wins.p2 += 1;
