@@ -37,7 +37,7 @@ function stateToClip(state) {
 export default function FighterGLB({ fighter, state }) {
   const gltf = useGLTF(fighter.glbUrl);
   // Deep-clone the scene + skeleton so P1 and P2 can render the same GLB independently.
-  const scene = useMemo(() => SkeletonUtils.clone(gltf.scene), [gltf.scene]);
+  const scene = useMemo(() => skeletonClone(gltf.scene), [gltf.scene]);
 
   // Cast/receive shadows on all skinned meshes.
   useEffect(() => {
