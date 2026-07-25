@@ -20,7 +20,10 @@ export function createInputController() {
   const buffer = []; // { name, t }
   let stickX = 0, stickY = 0;
   let lastHPTap = 0;
-  let virtualSP = 0; // frames to emit SP=true
+  let virtualSP = 0;
+  // Double-tap detection for dash / backdash (200ms window)
+  let lastLeftTap = 0, lastRightTap = 0;
+  let dashF = 0, dashB = 0; // frames to emit dash token
 
   const pushEvent = (name) => {
     const now = performance.now();
@@ -30,19 +33,26 @@ export function createInputController() {
   };
 
   const detectCombos = (name, now) => {
-    // LP -> HP -> HK
-    const seq = buffer.map((e) => e.name).slice(-6);
-    const s = seq.join(",");
-    if (s.endsWith("LP,HP,HK")) { virtualSP = 3; buffer.length = 0; return; }
-    // Double-tap HP
+    const seq = buffer.map((e) => e.name).slice(-6).join(",");
+    if (seq.endsWith("LP,HP,HK")) { virtualSP = 3; buffer.length = 0; return; }
     if (name === "HP") {
       if (now - lastHPTap < 260) { virtualSP = 3; lastHPTap = 0; return; }
       lastHPTap = now;
     }
-    // Swipe-forward + HP  (stick pushed >0.6 forward-ish)
     if (name === "HP" && Math.abs(stickX) > 0.6) { virtualSP = 3; return; }
-    // Down + HK sweep -> also virtual SP (Special2 sweep)
     if (name === "HK" && stickY > 0.55) { virtualSP = 3; return; }
+  };
+
+  const tapDirection = (dir) => {
+    // dir: "left" | "right" — used for f,f / b,b detection.
+    const now = performance.now();
+    if (dir === "right") {
+      if (now - lastRightTap < 200) { dashF = 1; lastRightTap = 0; return; }
+      lastRightTap = now;
+    } else if (dir === "left") {
+      if (now - lastLeftTap < 200) { dashB = 1; lastLeftTap = 0; return; }
+      lastLeftTap = now;
+    }
   };
 
   const onDown = (e) => {
@@ -52,6 +62,7 @@ export function createInputController() {
       if (!held.has(name)) {
         held.add(name); e.preventDefault();
         if (["LP", "HP", "LK", "HK"].includes(name)) pushEvent(name);
+        if (name === "left" || name === "right") tapDirection(name);
       }
     }
   };
@@ -65,17 +76,27 @@ export function createInputController() {
   return {
     snapshot() {
       const s = { left: false, right: false, up: false, down: false, block: false,
-                  LP: false, HP: false, LK: false, HK: false, SP: false };
+                  LP: false, HP: false, LK: false, HK: false, SP: false,
+                  dashF: false, dashB: false };
       for (const k of held) s[k] = true;
       for (const k of touch) s[k] = true;
       if (virtualSP > 0) { s.SP = true; virtualSP -= 1; }
+      if (dashF > 0) { s.dashF = true; dashF -= 1; }
+      if (dashB > 0) { s.dashB = true; dashB -= 1; }
       return s;
     },
-    setStickVector(nx, ny) { stickX = nx; stickY = ny; },
+    setStickVector(nx, ny) {
+      // 20% deadzone
+      const dead = 0.2;
+      const clamp = (v) => Math.abs(v) < dead ? 0 : v;
+      stickX = clamp(nx); stickY = clamp(ny);
+    },
+    tapDirection,
     touchDown(name) {
       if (!touch.has(name)) {
         touch.add(name);
         if (["LP", "HP", "LK", "HK"].includes(name)) pushEvent(name);
+        if (name === "left" || name === "right") tapDirection(name);
       }
     },
     touchUp(name) { touch.delete(name); },

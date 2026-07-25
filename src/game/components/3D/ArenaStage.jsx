@@ -12,38 +12,49 @@ export default function ArenaStage({ stage }) {
     }
   }, [bgTex]);
 
+  // Exponential fog tuned per stage to blend the 3D floor into the 2D backdrop.
+  const fogDensity = stage.fogDensity || 0.035;
+
   return (
     <>
-      {/* Curved backdrop plane behind fighters */}
+      {/* Painted distant backdrop */}
       <mesh position={[0, 4, -9]}>
         <planeGeometry args={[36, 14]} />
-        <meshBasicMaterial map={bgTex} toneMapped={false} />
+        <meshBasicMaterial map={bgTex} toneMapped={false} fog={false} />
       </mesh>
 
-      {/* Floor blended with tint */}
+      {/* Low-poly 3D fighting floor tile — matches stage tint */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
         <planeGeometry args={[40, 20]} />
-        <meshLambertMaterial color={stage.tint} />
+        <meshStandardMaterial color={stage.tint} roughness={0.85} metalness={0.05} />
       </mesh>
 
-      {/* Grounding contact shadow strip */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
+      {/* Ring / mat inset directly beneath fighters */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.005, 0]} receiveShadow>
+        <planeGeometry args={[10, 6]} />
+        <meshStandardMaterial color={stage.matColor || stage.tint} roughness={0.95} metalness={0} />
+      </mesh>
+
+      {/* Dedicated shadow receiver — soft dark disc anchoring fighter shadows */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]} receiveShadow>
         <planeGeometry args={[14, 4]} />
-        <meshBasicMaterial color="#000000" transparent opacity={0.35} />
+        <shadowMaterial transparent opacity={0.4} side={THREE.DoubleSide} />
       </mesh>
 
-      {/* Theme-specific foreground props + particles */}
       {stage.theme === "temple" && <TempleProps />}
       {stage.theme === "runes" && <RuneProps />}
       {stage.theme === "cathedral" && <CathedralProps />}
       {stage.theme === "hell" && <HellProps />}
       {stage.theme === "cage" && <CageProps />}
 
-      {/* Lighting */}
       <ambientLight intensity={0.75} color={stage.ambient} />
-      <directionalLight position={[6, 10, 6]} intensity={0.9} color={stage.ambient} castShadow />
+      <directionalLight position={[6, 10, 6]} intensity={1.0} color={stage.ambient}
+        castShadow shadow-mapSize-width={1024} shadow-mapSize-height={1024}
+        shadow-camera-left={-8} shadow-camera-right={8}
+        shadow-camera-top={8} shadow-camera-bottom={-2} />
       <hemisphereLight args={[stage.ambient, stage.fog, 0.4]} />
-      <fog attach="fog" args={[stage.fog, 18, 40]} />
+      {/* Height-based exponential fog matched to backdrop dominant color */}
+      <fogExp2 attach="fog" args={[stage.fog, fogDensity]} />
     </>
   );
 }
