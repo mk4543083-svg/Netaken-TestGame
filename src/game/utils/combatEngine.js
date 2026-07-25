@@ -36,9 +36,16 @@ export function makeFighter(fighterMeta, side) {
   };
 }
 
-const GRAV = -0.045;
-const MOVE_SPEED = 0.09;
-const JUMP_V = 0.55;
+// Tekken-3 style heavy physics: strong gravity, short low-arc jumps.
+// Jump apex clamped so total flight is ~26 frames and max height ~1.6 units.
+const GRAV = -0.106;      // ~ -38 units/sec^2 at 60hz (0.0176 units per frame^2)
+const MOVE_SPEED = 0.053; // ~3.2 units/sec forward walk
+const BACK_SPEED = 0.035; // ~2.1 units/sec back walk
+const DASH_SPEED = 0.142; // ~8.5 units/sec forward dash
+const BACKDASH_SPEED = 0.117; // ~7.0 units/sec backdash
+const JUMP_V = 0.34;      // apex clamped to ~1.6 units
+const DASH_FRAMES = 18;
+const BACKDASH_FRAMES = 22;
 
 export function stepFighter(f, input, opp, dt, events) {
   // input = { left, right, up, down, block, LP, HP, LK, HK, SP }
