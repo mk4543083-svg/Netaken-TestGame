@@ -52,48 +52,95 @@ const DASH_FRAMES = 18;
 const BACKDASH_FRAMES = 22;
 
 export function stepFighter(f, input, opp, dt, events) {
-  // input = { left, right, up, down, block, LP, HP, LK, HK, SP }
-  if (f.state === "ko") return;
+  // input = { left, right, up, down, block, LP, HP, LK, HK, SP, dashF, dashB }
+  // KO: input completely disabled, character remains on floor.
+  if (f.state === "ko") {
+    f.vx = 0;
+    if (f.y > 0) applyPhysics(f);
+    return;
+  }
 
-  // face opponent
+  // Auto-face opponent every tick (Tekken auto-turn).
   f.facing = opp.x >= f.x ? 1 : -1;
+
+  // Procedural hit-react timer decays regardless.
+  if (f.procHit > 0) f.procHit -= 1;
 
   // hitstun countdown
   if (f.stunT > 0) {
     f.stunT -= 1;
     f.state = "hitstun";
-    // apply pushback
     f.x += f.vx;
     f.vx *= 0.85;
     if (f.stunT <= 0) { f.state = "idle"; f.combo = 0; }
     return applyPhysics(f);
   }
 
-  // active attack
+  // active attack — locked, no interrupt except buffered combo cancels
   if (f.attack) {
     f.attack.elapsed += 1;
     const m = MOVES[f.attack.move];
     const total = m.startup + m.active + m.recovery;
-    // active window: try to hit
     if (f.attack.elapsed > m.startup && f.attack.elapsed <= m.startup + m.active && !f.attack.hit) {
       if (checkHit(f, opp, m)) {
         f.attack.hit = true;
         resolveHit(f, opp, m, events);
+        // Hit-stop: freeze both fighters 4 frames for weight/impact feel.
+        f.stateT = 4;
       }
+    }
+    // 8-frame input buffer during recovery: capture next attack press.
+    if (f.attack.elapsed > m.startup + m.active) {
+      const buffered = input.HP ? "HP" : input.HK ? "HK" : input.LP ? "LP" : input.LK ? "LK" : null;
+      if (buffered && !f.inputBuffer) f.inputBuffer = { move: buffered, framesLeft: 8 };
     }
     if (f.attack.elapsed >= total) {
       f.attack = null;
       f.state = "idle";
+      // Cash in buffered input as a combo cancel.
+      if (f.inputBuffer) {
+        f.attack = { move: f.inputBuffer.move, elapsed: 0, hit: false };
+        f.state = "attack";
+        f.inputBuffer = null;
+      }
     }
     return applyPhysics(f);
   }
 
-  // block
-  if (input.block && f.onGround) { f.state = "block"; return applyPhysics(f); }
+  // Dash / backdash active window: locked directional burst.
+  if (f.dashT > 0) {
+    f.dashT -= 1;
+    f.vx = f.dashDir * (f.state === "backdash" ? BACKDASH_SPEED : DASH_SPEED);
+    // backdash cancellable into block at frame 6+
+    if (f.state === "backdash" && (BACKDASH_FRAMES - f.dashT) >= 6 && input.block) {
+      f.dashT = 0; f.state = "block"; f.vx = 0;
+      return applyPhysics(f);
+    }
+    if (f.dashT <= 0) { f.state = "idle"; f.vx = 0; }
+    return applyPhysics(f);
+  }
 
-  // start attack (priority: SP > HP/HK > LP/LK)
+  // Trigger dash on double-tap tokens
+  if (input.dashF && f.onGround) {
+    f.dashT = DASH_FRAMES; f.dashDir = f.facing; f.state = "dash";
+    return applyPhysics(f);
+  }
+  if (input.dashB && f.onGround) {
+    f.dashT = BACKDASH_FRAMES; f.dashDir = -f.facing; f.state = "backdash";
+    return applyPhysics(f);
+  }
+
+  // Block: back-hold gives high-guard, down+back gives crouch-guard.
+  const holdingBack = (f.facing === 1 && input.left) || (f.facing === -1 && input.right);
+  if ((input.block || holdingBack) && f.onGround) {
+    f.state = input.down ? "block" : "block";
+    f.vx = 0;
+    return applyPhysics(f);
+  }
+
+  // Attack (only allowed on ground OR mid-air for jumping normals — simplified: ground only for now)
   const btn = input.SP ? "SP" : input.HP ? "HP" : input.HK ? "HK" : input.LP ? "LP" : input.LK ? "LK" : null;
-  if (btn) {
+  if (btn && f.onGround) {
     if (btn === "SP" && f.rage < 100) {
       // not ready
     } else {
@@ -107,10 +154,10 @@ export function stepFighter(f, input, opp, dt, events) {
     }
   }
 
-  // movement
+  // Movement (Tekken-tuned speeds — forward faster than back).
   if (f.onGround) {
-    if (input.left)  f.vx = -MOVE_SPEED;
-    else if (input.right) f.vx = MOVE_SPEED;
+    if (input.left) f.vx = f.facing === 1 ? -BACK_SPEED : -MOVE_SPEED;
+    else if (input.right) f.vx = f.facing === 1 ? MOVE_SPEED : BACK_SPEED;
     else f.vx = 0;
     if (input.up) { f.vy = JUMP_V; f.onGround = false; }
     f.state = f.vx !== 0 ? "walk" : (input.down ? "crouch" : "idle");
