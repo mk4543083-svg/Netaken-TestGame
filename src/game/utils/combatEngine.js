@@ -25,7 +25,7 @@ export function makeFighter(fighterMeta, side) {
     facing: side === "p1" ? 1 : -1,
     hp: 100, maxHp: 100,
     rage: 0, maxRage: 100,
-    state: "idle", // idle | walk | jump | crouch | block | attack | hitstun | ko | special
+    state: "idle", // idle | walk | jump | crouch | block | attack | hitstun | ko | special | dash | backdash
     attack: null, // { move, elapsed }
     stateT: 0,
     combo: 0,
@@ -33,6 +33,10 @@ export function makeFighter(fighterMeta, side) {
     onGround: true,
     stunT: 0,
     slowMoT: 0,
+    dashT: 0,
+    dashDir: 0,
+    inputBuffer: null, // { move, framesLeft } — 8-frame Tekken buffer
+    procHit: 0, // frames of procedural hit-react (fallback when no GLB clip)
   };
 }
 
