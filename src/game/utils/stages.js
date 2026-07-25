@@ -10,15 +10,15 @@ export const SELECT_BG_URL = selBg.url;
 
 export const STAGES = [
   { id: "japanese", name: "Japanese Temple",  desc: "Torii gate · sakura · lantern glow", bg: jp.url,
-    tint: "#e8b090", ambient: "#ffd0a0", fog: "#402028", theme: "temple" },
+    tint: "#e8b090", matColor: "#8a5040", ambient: "#ffd0a0", fog: "#c0603a", fogDensity: 0.028, theme: "temple" },
   { id: "quixotic", name: "Quixotic Temple",  desc: "Floating pillars · mystic runes",   bg: qx.url,
-    tint: "#a090ff", ambient: "#c0a0ff", fog: "#1a1030", theme: "runes" },
+    tint: "#6a5aa8", matColor: "#3a2a6a", ambient: "#c0a0ff", fog: "#1a1a5a", fogDensity: 0.045, theme: "runes" },
   { id: "cathedral", name: "Lost Cathedral", desc: "Broken gothic nave · dust motes",    bg: lc.url,
-    tint: "#c0c8d8", ambient: "#a8b0c8", fog: "#101820", theme: "cathedral" },
+    tint: "#a8b0c0", matColor: "#4a5060", ambient: "#a8b0c8", fog: "#1a2838", fogDensity: 0.035, theme: "cathedral" },
   { id: "hell", name: "Hell Circle",         desc: "Chained platform · embers",          bg: hc.url,
-    tint: "#ff6030", ambient: "#ff8040", fog: "#200808", theme: "hell" },
+    tint: "#8a3020", matColor: "#3a0a08", ambient: "#ff8040", fog: "#601010", fogDensity: 0.055, theme: "hell" },
   { id: "cage", name: "Neon Cage",           desc: "Octagon · red neon · crowd",         bg: nc.url,
-    tint: "#ff2040", ambient: "#ff4060", fog: "#180010", theme: "cage" },
+    tint: "#40202a", matColor: "#20101a", ambient: "#ff4060", fog: "#2a0818", fogDensity: 0.040, theme: "cage" },
 ];
 
 export const getStage = (id) => STAGES.find((s) => s.id === id) || STAGES[0];
