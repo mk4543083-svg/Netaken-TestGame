@@ -23,22 +23,11 @@ export default function ArenaStage({ stage }) {
         <meshBasicMaterial map={bgTex} toneMapped={false} fog={false} />
       </mesh>
 
-      {/* Low-poly 3D fighting floor tile — matches stage tint */}
+      {/* Seamless full-arena floor — no mat, no local shadow box.
+          Characters can walk anywhere on this plane. */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
-        <planeGeometry args={[40, 20]} />
-        <meshStandardMaterial color={stage.tint} roughness={0.85} metalness={0.05} />
-      </mesh>
-
-      {/* Ring / mat inset directly beneath fighters */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.005, 0]} receiveShadow>
-        <planeGeometry args={[10, 6]} />
-        <meshStandardMaterial color={stage.matColor || stage.tint} roughness={0.95} metalness={0} />
-      </mesh>
-
-      {/* Dedicated shadow receiver — soft dark disc anchoring fighter shadows */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]} receiveShadow>
-        <planeGeometry args={[14, 4]} />
-        <shadowMaterial transparent opacity={0.4} side={THREE.DoubleSide} />
+        <planeGeometry args={[70, 44, 1, 1]} />
+        <meshStandardMaterial color={stage.tint} roughness={0.9} metalness={0.05} />
       </mesh>
 
       {stage.theme === "temple" && <TempleProps />}
@@ -48,10 +37,14 @@ export default function ArenaStage({ stage }) {
       {stage.theme === "cage" && <CageProps />}
 
       <ambientLight intensity={0.75} color={stage.ambient} />
-      <directionalLight position={[6, 10, 6]} intensity={1.0} color={stage.ambient}
-        castShadow shadow-mapSize-width={1024} shadow-mapSize-height={1024}
-        shadow-camera-left={-8} shadow-camera-right={8}
-        shadow-camera-top={8} shadow-camera-bottom={-2} />
+      {/* Tekken-style hard directional shadow cast straight onto the arena floor */}
+      <directionalLight position={[5, 12, 6]} intensity={1.15} color={stage.ambient}
+        castShadow shadow-mapSize-width={2048} shadow-mapSize-height={2048}
+        shadow-bias={-0.0004}
+        shadow-camera-near={0.5} shadow-camera-far={40}
+        shadow-camera-left={-16} shadow-camera-right={16}
+        shadow-camera-top={14} shadow-camera-bottom={-8} />
+
       <hemisphereLight args={[stage.ambient, stage.fog, 0.4]} />
       {/* Height-based exponential fog matched to backdrop dominant color */}
       <fogExp2 attach="fog" args={[stage.fog, fogDensity]} />
