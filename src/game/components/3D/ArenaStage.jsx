@@ -17,11 +17,12 @@ export default function ArenaStage({ stage }) {
 
   return (
     <>
-      {/* Painted distant backdrop */}
-      <mesh position={[0, 4, -9]}>
-        <planeGeometry args={[36, 14]} />
+      {/* Painted distant backdrop — wide enough to cover the full arena bounds */}
+      <mesh position={[0, 6, -14]}>
+        <planeGeometry args={[64, 24]} />
         <meshBasicMaterial map={bgTex} toneMapped={false} fog={false} />
       </mesh>
+
 
       {/* Seamless full-arena floor — no mat, no local shadow box.
           Characters can walk anywhere on this plane. */}
