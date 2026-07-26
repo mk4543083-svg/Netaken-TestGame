@@ -82,7 +82,7 @@ function targetDuration(key, state) {
   return null;
 }
 
-export default function FighterGLB({ fighter, state, animScale = 1 }) {
+export default function FighterGLB({ fighter, state, animScale = 1, speedRef }) {
   const gltf = useGLTF(fighter.glbUrl);
   const scene = useMemo(() => skeletonClone(gltf.scene), [gltf.scene]);
   const rootRef = useRef();
@@ -160,7 +160,7 @@ export default function FighterGLB({ fighter, state, animScale = 1 }) {
   };
 
   useFrame((_, deltaRaw) => {
-    const dt = Math.min(deltaRaw, 0.033) * animScale;
+    const dt = Math.min(deltaRaw, 0.033) * (speedRef ? speedRef.current : animScale);
     mixer.update(dt);
 
     const desired = stateToClip(state);
