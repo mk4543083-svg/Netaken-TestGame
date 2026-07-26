@@ -12,19 +12,29 @@ import salmanGlb from "../../assets/fighters/salman.glb.asset.json";
 import putinGlb from "../../assets/fighters/putin.glb.asset.json";
 
 // Default clip hints; fighter overrides can refine per-model.
+// NOTE: "Walk" deliberately excludes run/sprint names so normal movement never
+// falls back to a running animation — Run is its own logical clip for dashes.
 const DEFAULT_CLIPS = {
-  Idle:      ["idle", "stand", "breath", "tpose", "rest"],
-  Walk:      ["walk", "run", "move", "forward"],
-  Jab:       ["jab", "punch", "hook", "attack1", "hit1", "punch1"],
-  Cross:     ["cross", "punch2", "attack2", "heavy", "power"],
-  LowKick:   ["lowkick", "kick_low", "kick1", "attack3", "kick"],
-  HighKick:  ["highkick", "kick_high", "kick2", "roundhouse", "kick"],
-  Special1:  ["special1", "ultimate", "super", "power", "combo"],
-  Special2:  ["special2", "sweep", "spin", "finisher", "ultimate"],
-  HitReact:  ["hit", "hurt", "react", "damage", "flinch"],
-  Knockdown: ["knockdown", "die", "death", "ko", "down", "defeat"],
-  Block:     ["block", "guard", "defend"],
+  Idle:        ["idle", "stand", "breath", "rest", "tpose"],
+  Walk:        ["walkforward", "walk_f", "walk", "step", "move"],
+  WalkBack:    ["walkback", "walk_b", "backward", "retreat"],
+  Run:         ["run", "sprint", "dash", "jog"],
+  Sidestep:    ["sidestep", "side", "strafe", "dodge"],
+  Jump:        ["jump", "leap", "hop"],
+  Crouch:      ["crouch", "duck", "low_stance", "squat"],
+  CrouchBlock: ["crouchblock", "crouchguard", "lowblock", "lowguard"],
+  Jab:         ["jab", "punch1", "punch", "hook", "attack1", "hit1"],
+  Cross:       ["cross", "punch2", "attack2", "heavy", "power"],
+  LowKick:     ["lowkick", "kick_low", "kick1", "attack3", "kick"],
+  HighKick:    ["highkick", "kick_high", "kick2", "roundhouse", "kick"],
+  Special1:    ["special1", "ultimate", "super", "power", "combo"],
+  Special2:    ["special2", "sweep", "spin", "finisher", "ultimate"],
+  HitReact:    ["hitreact", "hit", "hurt", "react", "damage", "flinch"],
+  Knockdown:   ["knockdown", "die", "death", "ko", "down", "defeat", "fall"],
+  Victory:     ["victory", "win", "celebrate", "taunt", "cheer", "dance"],
+  Block:       ["block", "guard", "defend"],
 };
+
 
 export const ROSTER = [
   { id: "modi", name: "Narendra Modi", tag: "PM 56\"", origin: "India",

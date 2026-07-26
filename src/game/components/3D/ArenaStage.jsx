@@ -17,28 +17,18 @@ export default function ArenaStage({ stage }) {
 
   return (
     <>
-      {/* Painted distant backdrop */}
-      <mesh position={[0, 4, -9]}>
-        <planeGeometry args={[36, 14]} />
+      {/* Painted distant backdrop — wide enough to cover the full arena bounds */}
+      <mesh position={[0, 6, -14]}>
+        <planeGeometry args={[64, 24]} />
         <meshBasicMaterial map={bgTex} toneMapped={false} fog={false} />
       </mesh>
 
-      {/* Low-poly 3D fighting floor tile — matches stage tint */}
+
+      {/* Seamless full-arena floor — no mat, no local shadow box.
+          Characters can walk anywhere on this plane. */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
-        <planeGeometry args={[40, 20]} />
-        <meshStandardMaterial color={stage.tint} roughness={0.85} metalness={0.05} />
-      </mesh>
-
-      {/* Ring / mat inset directly beneath fighters */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.005, 0]} receiveShadow>
-        <planeGeometry args={[10, 6]} />
-        <meshStandardMaterial color={stage.matColor || stage.tint} roughness={0.95} metalness={0} />
-      </mesh>
-
-      {/* Dedicated shadow receiver — soft dark disc anchoring fighter shadows */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]} receiveShadow>
-        <planeGeometry args={[14, 4]} />
-        <shadowMaterial transparent opacity={0.4} side={THREE.DoubleSide} />
+        <planeGeometry args={[70, 44, 1, 1]} />
+        <meshStandardMaterial color={stage.tint} roughness={0.9} metalness={0.05} />
       </mesh>
 
       {stage.theme === "temple" && <TempleProps />}
@@ -48,10 +38,14 @@ export default function ArenaStage({ stage }) {
       {stage.theme === "cage" && <CageProps />}
 
       <ambientLight intensity={0.75} color={stage.ambient} />
-      <directionalLight position={[6, 10, 6]} intensity={1.0} color={stage.ambient}
-        castShadow shadow-mapSize-width={1024} shadow-mapSize-height={1024}
-        shadow-camera-left={-8} shadow-camera-right={8}
-        shadow-camera-top={8} shadow-camera-bottom={-2} />
+      {/* Tekken-style hard directional shadow cast straight onto the arena floor */}
+      <directionalLight position={[5, 12, 6]} intensity={1.15} color={stage.ambient}
+        castShadow shadow-mapSize-width={2048} shadow-mapSize-height={2048}
+        shadow-bias={-0.0004}
+        shadow-camera-near={0.5} shadow-camera-far={40}
+        shadow-camera-left={-16} shadow-camera-right={16}
+        shadow-camera-top={14} shadow-camera-bottom={-8} />
+
       <hemisphereLight args={[stage.ambient, stage.fog, 0.4]} />
       {/* Height-based exponential fog matched to backdrop dominant color */}
       <fogExp2 attach="fog" args={[stage.fog, fogDensity]} />
@@ -112,10 +106,6 @@ function RuneProps() {
           <meshLambertMaterial color="#4a3a6a" />
         </mesh>
       ))}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
-        <ringGeometry args={[2.5, 3.0, 32]} />
-        <meshBasicMaterial color="#a080ff" transparent opacity={0.7} />
-      </mesh>
       <pointLight color="#a080ff" position={[0, 3, 0]} intensity={2} distance={10} />
     </>
   );
@@ -147,10 +137,6 @@ function HellProps() {
           <boxGeometry args={[0.15, 8, 0.15]} /><meshBasicMaterial color="#3a2a1a" />
         </mesh>
       ))}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
-        <ringGeometry args={[3.2, 3.6, 32]} />
-        <meshBasicMaterial color="#ff4a20" transparent opacity={0.7} />
-      </mesh>
       <pointLight color="#ff6020" position={[0, 0.5, 0]} intensity={3} distance={12} />
     </>
   );

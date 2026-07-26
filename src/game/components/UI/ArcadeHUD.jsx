@@ -1,5 +1,5 @@
 // ArcadeHUD.jsx — dual health bars, rage gauges, timer, round pips, combo counter.
-export default function ArcadeHUD({ p1, p2, timer, round, wins, combo }) {
+export default function ArcadeHUD({ p1, p2, timer, round, wins, combo, infiniteTime, winsNeeded }) {
   return (
     <div className="absolute inset-x-0 top-0 p-2 md:p-4 pointer-events-none z-10">
       <div className="grid grid-cols-[1fr_auto_1fr] gap-2 md:gap-4 items-center">
@@ -7,7 +7,7 @@ export default function ArcadeHUD({ p1, p2, timer, round, wins, combo }) {
         <div className="flex flex-col items-center">
           <div className="text-3xl md:text-5xl font-black text-[#ffe27a] tabular-nums leading-none"
                style={{ textShadow: "2px 2px 0 #000" }}>
-            {Math.max(0, Math.ceil(timer))}
+            {infiniteTime ? "\u221E" : Math.max(0, Math.ceil(timer))}
           </div>
           <div className="text-[10px] text-white/70 tracking-widest">ROUND {round}</div>
         </div>
