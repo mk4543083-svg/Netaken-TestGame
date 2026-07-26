@@ -106,10 +106,6 @@ function RuneProps() {
           <meshLambertMaterial color="#4a3a6a" />
         </mesh>
       ))}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
-        <ringGeometry args={[2.5, 3.0, 32]} />
-        <meshBasicMaterial color="#a080ff" transparent opacity={0.7} />
-      </mesh>
       <pointLight color="#a080ff" position={[0, 3, 0]} intensity={2} distance={10} />
     </>
   );
@@ -141,10 +137,6 @@ function HellProps() {
           <boxGeometry args={[0.15, 8, 0.15]} /><meshBasicMaterial color="#3a2a1a" />
         </mesh>
       ))}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
-        <ringGeometry args={[3.2, 3.6, 32]} />
-        <meshBasicMaterial color="#ff4a20" transparent opacity={0.7} />
-      </mesh>
       <pointLight color="#ff6020" position={[0, 0.5, 0]} intensity={3} distance={12} />
     </>
   );
