@@ -1,5 +1,5 @@
 // ArcadeHUD.jsx — dual health bars, rage gauges, timer, round pips, combo counter.
-export default function ArcadeHUD({ p1, p2, timer, round, wins, combo }) {
+export default function ArcadeHUD({ p1, p2, timer, round, wins, combo, infiniteTime, winsNeeded }) {
   return (
     <div className="absolute inset-x-0 top-0 p-2 md:p-4 pointer-events-none z-10">
       <div className="grid grid-cols-[1fr_auto_1fr] gap-2 md:gap-4 items-center">
