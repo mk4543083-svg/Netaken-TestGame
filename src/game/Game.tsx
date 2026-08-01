@@ -18,6 +18,7 @@ import ArenaStage from "./components/3D/ArenaStage";
 import FighterGLB from "./components/3D/FighterGLB";
 import SpecialFX from "./components/3D/SpecialFX";
 import DamageNumbers from "./components/3D/DamageNumbers";
+import BloodFX from "./components/3D/BloodFX";
 import { createInputController } from "./utils/input";
 import { makeFighter, stepFighter } from "./utils/combatEngine";
 import { makeCpuState, cpuTick } from "./utils/cpuAiEngine";
@@ -136,6 +137,8 @@ function FightScene({ config, p1Meta, p2Meta, stage, onRematch, onCharacterSelec
       combo: { side: null as any, count: 0 },
       fx: [] as any[],
       dmg: [] as any[],
+      blood: [] as any[],
+      bloodId: 0,
       dmgId: 0,
       fxId: 0,
       phase: "ready" as "ready" | "fight" | "roundEnd" | "victory",
@@ -153,9 +156,11 @@ function FightScene({ config, p1Meta, p2Meta, stage, onRematch, onCharacterSelec
     inputRef.current = createInputController();
     Audio.unlock();
     Audio.bgmFight(1);
+    Audio.crowdStart();
+    Audio.roundBell();
     Audio.say("Ready");
     const t = setTimeout(() => Audio.say("Fight"), 1500);
-    return () => { clearTimeout(t); inputRef.current?.dispose(); Audio.bgmStop(); };
+    return () => { clearTimeout(t); inputRef.current?.dispose(); Audio.bgmStop(); Audio.crowdStop(); };
   }, []);
 
   // Freeze inputs while paused / after KO.
@@ -163,8 +168,11 @@ function FightScene({ config, p1Meta, p2Meta, stage, onRematch, onCharacterSelec
 
   const onMatchEnd = useCallback((winnerMeta: any) => {
     Audio.bgmVictory();
-    setTimeout(() => setResult({ winner: winnerMeta }), 2000);
-  }, []);
+    Audio.winFanfare();
+    const voice = setTimeout(() => Audio.say(config.mode === "training" ? "Winner" : "You Win"), 400);
+    const show = setTimeout(() => setResult({ winner: winnerMeta }), 2500);
+    return () => { clearTimeout(voice); clearTimeout(show); };
+  }, [config.mode]);
 
   useEffect(() => {
     let raf = 0;
@@ -305,6 +313,10 @@ function FxLayer({ sRef }: any) {
         <SpecialFX key={fx.id} fx={fx.fx} from={fx.from} toward={fx.toward}
           onDone={() => { s.fx = s.fx.filter((x: any) => x.id !== fx.id); s.__fxDirty = true; }} />
       ))}
+      {s.blood.map((b: any) => (
+        <BloodFX key={b.id} x={b.x} y={b.y} z={b.z} dir={b.dir} heavy={b.heavy}
+          onDone={() => { s.blood = s.blood.filter((x: any) => x.id !== b.id); s.__fxDirty = true; }} />
+      ))}
       <DamageNumbers items={s.dmg} />
     </>
   );
@@ -358,7 +370,7 @@ function FightCamera({ sRef }: any) {
 const DUMMY_INPUT = {
   left: false, right: false, up: false, down: false, block: false,
   LP: false, HP: false, LK: false, HK: false, SP: false,
-  jump: false, dashF: false, dashB: false, sideU: false, sideD: false,
+  jump: false, tapLeft: false, tapRight: false, sideU: false, sideD: false,
 };
 
 function tickGame(s: any, input: any, config: any, dummy: string, onMatchEnd: (w: any) => void) {
@@ -394,6 +406,7 @@ function tickGame(s: any, input: any, config: any, dummy: string, onMatchEnd: (w
         s.phase = "ready";
         s.phaseT = 0;
         Audio.bgmFight(s.round);
+        Audio.roundBell();
         Audio.say("Round " + s.round);
       }
     }
@@ -426,12 +439,24 @@ function tickGame(s: any, input: any, config: any, dummy: string, onMatchEnd: (w
       s.__fxDirty = true;
       s.combo = { side: ev.side === "p1" ? "p2" : "p1", count: ev.combo };
       s.shake = ev.blocked ? 0.05 : ev.special ? 0.36 : ev.heavy ? 0.22 : 0.13;
+      if (!ev.blocked) {
+        const attacker = ev.side === "p1" ? s.p2 : s.p1;
+        s.blood.push({
+          id: ++s.bloodId,
+          x: ev.at.x, y: ev.at.y, z: ev.at.z || 0,
+          dir: attacker.facing || 1, heavy: !!(ev.heavy || ev.special),
+        });
+        if (s.blood.length > 10) s.blood.splice(0, s.blood.length - 10);
+      }
       if (ev.blocked) Audio.block();
       else if (ev.special) Audio.hitSpecial();
       else if (ev.heavy) Audio.hitHeavy();
       else Audio.hitLight();
-      if (!ev.blocked) Audio.hurt(ev.heavy);
+      if (!ev.blocked) { Audio.hurt(ev.heavy); Audio.bloodSplat(ev.heavy); }
+      if (!ev.blocked && ev.combo && ev.combo % 5 === 0) Audio.comboMilestone(ev.combo);
       if (s.dmg.length > 16) s.dmg.splice(0, s.dmg.length - 16);
+    } else if (ev.type === "step") {
+      Audio.footstep(ev.heavy);
     } else if (ev.type === "swing") {
       Audio.whiff(ev.heavy);
     } else if (ev.type === "kiai") {
