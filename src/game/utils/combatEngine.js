@@ -14,6 +14,14 @@ export const MOVES = {
   SP: { name: "SP", damage: 30, reach: 2.5,  startup: 12, active: 20, recovery: 28, hitstun: 40, block: 15, rage: 0, heavy: true, special: true },
 };
 
+function maybeStep(f, events, heavy) {
+  f.stepCd = (f.stepCd || 0) - 1;
+  if (f.stepCd <= 0) {
+    events.push({ type: "step", side: f.side, heavy });
+    f.stepCd = heavy ? 10 : 14;
+  }
+}
+
 export function makeFighter(fighterMeta, side) {
   return {
     id: fighterMeta.id,
@@ -41,6 +49,7 @@ export function makeFighter(fighterMeta, side) {
     sideDir: 0,
     inputBuffer: null, // { move, framesLeft } — 200ms (12f) buffer
     animKey: 0,        // bumped whenever a fresh one-shot anim must restart
+    stepCd: 0,         // footstep SFX cooldown
   };
 }
 
@@ -133,7 +142,15 @@ export function stepFighter(f, input, opp, dt, events) {
       f.dashT = 0; f.state = "block"; f.vx = 0; f.blocking = true;
       return applyPhysics(f, opp);
     }
-    if (f.dashT <= 0) { f.state = "idle"; f.vx = 0; }
+    maybeStep(f, events, true);
+    if (f.dashT <= 4) {
+      const buffered = pickButton(input, f.rage >= 100);
+      if (buffered && !f.inputBuffer) f.inputBuffer = { move: buffered, framesLeft: 8 };
+    }
+    if (f.dashT <= 0) {
+      f.state = "idle"; f.vx = 0;
+      if (f.inputBuffer) { startAttack(f, f.inputBuffer.move, events); f.inputBuffer = null; }
+    }
     return applyPhysics(f, opp);
   }
 
@@ -144,11 +161,13 @@ export function stepFighter(f, input, opp, dt, events) {
   }
 
   // Dash tokens (double-tap f,f / b,b)
-  if (input.dashF) {
+  const dashForwardInput = (f.facing === 1 && input.tapRight) || (f.facing === -1 && input.tapLeft);
+  const dashBackInput = (f.facing === 1 && input.tapLeft) || (f.facing === -1 && input.tapRight);
+  if (dashForwardInput) {
     f.dashT = DASH_FRAMES; f.dashDir = f.facing; f.state = "dash"; f.animKey++;
     return applyPhysics(f, opp);
   }
-  if (input.dashB) {
+  if (dashBackInput) {
     f.dashT = BACKDASH_FRAMES; f.dashDir = -f.facing; f.state = "backdash"; f.animKey++;
     return applyPhysics(f, opp);
   }
@@ -166,14 +185,10 @@ export function stepFighter(f, input, opp, dt, events) {
   }
 
   // ---- attacks ----
-  const btn = pickButton(input, true);
+  const btn = pickButton(input, f.rage >= 100);
   if (btn) {
-    if (btn === "SP" && f.rage < 100) {
-      // not ready — fall through to movement
-    } else {
-      startAttack(f, btn, events);
-      return applyPhysics(f, opp);
-    }
+    startAttack(f, btn, events);
+    return applyPhysics(f, opp);
   }
 
   // ---- block / movement ----
@@ -190,12 +205,13 @@ export function stepFighter(f, input, opp, dt, events) {
     // Tekken: holding back walks back AND guards.
     f.blocking = true;
     if (input.down) { f.state = "crouchBlock"; f.vx = 0; }
-    else { f.state = "walkBack"; f.vx = -f.facing * BACK_SPEED; }
+    else { f.state = "walkBack"; f.vx = -f.facing * BACK_SPEED; maybeStep(f, events, false); }
     return applyPhysics(f, opp);
   }
   if (holdingFwd) {
     f.state = "walk";
     f.vx = f.facing * MOVE_SPEED;
+    maybeStep(f, events, false);
     return applyPhysics(f, opp);
   }
   if (input.down) { f.state = "crouch"; f.vx = 0; return applyPhysics(f, opp); }
