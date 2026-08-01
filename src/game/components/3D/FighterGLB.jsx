@@ -226,11 +226,13 @@ export default function FighterGLB({ fighter, state, animScale = 1, speedRef }) 
       if (played) {
         const a = actions[desired];
         const want = targetDuration(desired, state);
-        if (a) {
-          if (want && a.__natural > 0) a.setDuration(want);
-          else if (a.__natural > 0) a.setDuration(a.__natural);
-          a.setEffectiveTimeScale(a.__reverse ? -1 : 1);
-          if (a.__reverse) a.time = a.getClip().duration - 0.001;
+        if (a && a.__natural > 0) {
+          const target = want || a.__natural;
+          a.setDuration(target);
+          if (a.__reverse) {
+            a.timeScale = -Math.abs(a.timeScale);
+            a.time = a.getClip().duration - 0.001;
+          }
         }
       }
       keyRef.current = animKey;

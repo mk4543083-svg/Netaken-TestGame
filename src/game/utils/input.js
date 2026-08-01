@@ -18,7 +18,7 @@ export function createInputController() {
   let lastHPTap = 0;
   let virtualSP = 0;
   let lastLeftTap = 0, lastRightTap = 0;
-  let dashF = 0, dashB = 0;
+  let tapRight = 0, tapLeft = 0;
   let sideU = 0, sideD = 0;
   let enabled = true;
 
@@ -43,10 +43,10 @@ export function createInputController() {
   const tapDirection = (dir) => {
     const now = performance.now();
     if (dir === "right") {
-      if (now - lastRightTap < 220) { dashF = 1; lastRightTap = 0; return; }
+      if (now - lastRightTap < 220) { tapRight = 1; lastRightTap = 0; return; }
       lastRightTap = now;
     } else if (dir === "left") {
-      if (now - lastLeftTap < 220) { dashB = 1; lastLeftTap = 0; return; }
+      if (now - lastLeftTap < 220) { tapLeft = 1; lastLeftTap = 0; return; }
       lastLeftTap = now;
     } else if (dir === "up") { sideU = 1; }
     else if (dir === "down") { sideD = 1; }
@@ -76,7 +76,7 @@ export function createInputController() {
   const empty = () => ({
     left: false, right: false, up: false, down: false, block: false,
     LP: false, HP: false, LK: false, HK: false, SP: false,
-    jump: false, dashF: false, dashB: false, sideU: false, sideD: false,
+    jump: false, tapLeft: false, tapRight: false, sideU: false, sideD: false,
   });
 
   return {
@@ -86,8 +86,8 @@ export function createInputController() {
       for (const k of held) s[k] = true;
       for (const k of touch) s[k] = true;
       if (virtualSP > 0) { s.SP = true; virtualSP -= 1; }
-      if (dashF > 0) { s.dashF = true; dashF -= 1; }
-      if (dashB > 0) { s.dashB = true; dashB -= 1; }
+      if (tapRight > 0) { s.tapRight = true; tapRight -= 1; }
+      if (tapLeft > 0) { s.tapLeft = true; tapLeft -= 1; }
       if (sideU > 0) { s.sideU = true; sideU -= 1; }
       if (sideD > 0) { s.sideD = true; sideD -= 1; }
       return s;
@@ -95,7 +95,7 @@ export function createInputController() {
     // Freeze all inputs (pause / KO lock).
     setEnabled(v) {
       enabled = v;
-      if (!v) { held.clear(); touch.clear(); dashF = dashB = sideU = sideD = virtualSP = 0; }
+      if (!v) { held.clear(); touch.clear(); tapRight = tapLeft = sideU = sideD = virtualSP = 0; }
     },
     // Live pressed names, used by the practice-mode tutorial highlighter.
     active() {
