@@ -106,9 +106,9 @@ function TempleProps() {
   return (
     <>
       {/* Torii pillars */}
-      <mesh position={[-6, 3, -2]}><boxGeometry args={[0.5, 6, 0.5]} /><meshLambertMaterial color="#c81a1a" /></mesh>
-      <mesh position={[6, 3, -2]}><boxGeometry args={[0.5, 6, 0.5]} /><meshLambertMaterial color="#c81a1a" /></mesh>
-      <mesh position={[0, 6.2, -2]}><boxGeometry args={[13, 0.5, 0.6]} /><meshLambertMaterial color="#c81a1a" /></mesh>
+      <mesh position={[-6, 3, -2]} castShadow><boxGeometry args={[0.5, 6, 0.5]} /><meshLambertMaterial color="#c81a1a" /></mesh>
+      <mesh position={[6, 3, -2]} castShadow><boxGeometry args={[0.5, 6, 0.5]} /><meshLambertMaterial color="#c81a1a" /></mesh>
+      <mesh position={[0, 6.2, -2]} castShadow><boxGeometry args={[13, 0.5, 0.6]} /><meshLambertMaterial color="#c81a1a" /></mesh>
       {/* Lanterns */}
       <mesh position={[-4, 3.5, -1.5]}><boxGeometry args={[0.6, 0.8, 0.6]} /><meshBasicMaterial color="#ffb060" /></mesh>
       <mesh position={[4, 3.5, -1.5]}><boxGeometry args={[0.6, 0.8, 0.6]} /><meshBasicMaterial color="#ffb060" /></mesh>
@@ -164,7 +164,7 @@ function CathedralProps() {
   return (
     <>
       {[-6, -3, 3, 6].map((x) => (
-        <mesh key={x} position={[x, 4, -3]}>
+        <mesh key={x} position={[x, 4, -3]} castShadow>
           <boxGeometry args={[0.6, 8, 0.6]} /><meshLambertMaterial color="#5a5a68" />
         </mesh>
       ))}
@@ -182,8 +182,8 @@ function HellProps() {
   return (
     <>
       {[-4, 4].map((x) => (
-        <mesh key={x} position={[x, 5, -2]}>
-          <boxGeometry args={[0.15, 8, 0.15]} /><meshBasicMaterial color="#3a2a1a" />
+        <mesh key={x} position={[x, 5, -2]} castShadow>
+          <boxGeometry args={[0.15, 8, 0.15]} /><meshStandardMaterial color="#3a2a1a" roughness={0.7} />
         </mesh>
       ))}
       <pointLight color="#ff6020" position={[0, 0.5, 0]} intensity={3} distance={12} />
@@ -199,8 +199,8 @@ function CageProps() {
         const a = (i / bars) * Math.PI * 2;
         const r = 8;
         return (
-          <mesh key={i} position={[Math.cos(a) * r, 3, -Math.abs(Math.sin(a)) * 2 - 3]}>
-            <boxGeometry args={[0.08, 6, 0.08]} /><meshBasicMaterial color="#c8c8d0" />
+          <mesh key={i} position={[Math.cos(a) * r, 3, -Math.abs(Math.sin(a)) * 2 - 3]} castShadow>
+            <boxGeometry args={[0.08, 6, 0.08]} /><meshStandardMaterial color="#c8c8d0" roughness={0.4} metalness={0.6} />
           </mesh>
         );
       })}
