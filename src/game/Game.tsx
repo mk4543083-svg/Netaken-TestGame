@@ -213,7 +213,7 @@ function FightScene({ config, p1Meta, p2Meta, stage, onRematch, onCharacterSelec
   return (
     <div className="relative w-full h-[100dvh] bg-black overflow-hidden select-none">
       <Canvas shadows dpr={[1, 1.5]} camera={{ position: [0, 2.4, 7.5], fov: 45 }}
-        gl={{ antialias: false, powerPreference: "high-performance" }}>
+        gl={{ antialias: false, powerPreference: "high-performance", toneMappingExposure: 1.25 }}>
         {world}
       </Canvas>
 

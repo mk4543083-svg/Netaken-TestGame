@@ -12,6 +12,10 @@ import { MOVES } from "../../utils/combatEngine";
 
 const CROSSFADE = 0.09;
 
+// Borrowed locomotion clips (e.g. Run standing in for Walk) play slower so slow
+// movement doesn't look like a sprint.
+const MOVEMENT_TIME_SCALE = { Walk: 0.5, WalkBack: 0.45, Run: 1.0, Sidestep: 0.85 };
+
 function pickClip(animations, hints) {
   if (!animations || !animations.length) return null;
   for (const h of hints) {
