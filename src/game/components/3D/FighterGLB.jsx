@@ -126,6 +126,7 @@ export default function FighterGLB({ fighter, state, animScale = 1, speedRef }) 
         action.__natural = clip.duration;
         // A back-walk resolved from a forward Walk clip is played in reverse.
         action.__reverse = key === "WalkBack" && resolvedAs !== "WalkBack";
+        action.__borrowed = resolvedAs !== key;
         out[key] = action;
       }
     }
