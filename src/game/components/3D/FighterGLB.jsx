@@ -12,6 +12,10 @@ import { MOVES } from "../../utils/combatEngine";
 
 const CROSSFADE = 0.09;
 
+// Borrowed locomotion clips (e.g. Run standing in for Walk) play slower so slow
+// movement doesn't look like a sprint.
+const MOVEMENT_TIME_SCALE = { Walk: 0.5, WalkBack: 0.45, Run: 1.0, Sidestep: 0.85 };
+
 function pickClip(animations, hints) {
   if (!animations || !animations.length) return null;
   for (const h of hints) {
@@ -122,6 +126,7 @@ export default function FighterGLB({ fighter, state, animScale = 1, speedRef }) 
         action.__natural = clip.duration;
         // A back-walk resolved from a forward Walk clip is played in reverse.
         action.__reverse = key === "WalkBack" && resolvedAs !== "WalkBack";
+        action.__borrowed = resolvedAs !== key;
         out[key] = action;
       }
     }
@@ -225,17 +230,21 @@ export default function FighterGLB({ fighter, state, animScale = 1, speedRef }) 
       const played = playSafe(desired, restart);
       if (played) {
         const a = actions[desired];
-        const want = targetDuration(desired, state);
         if (a && a.__natural > 0) {
-          const target = want || a.__natural;
-          a.setDuration(target);
-          if (a.__reverse) {
-            a.timeScale = -Math.abs(a.timeScale);
-            a.time = a.getClip().duration - 0.001;
+          const want = targetDuration(desired, state);
+          if (want) {
+            let scale = a.__natural / want;
+            scale = Math.max(0.6, Math.min(1.8, scale));
+            a.timeScale = a.__reverse ? -scale : scale;
+          } else {
+            const moveScale = MOVEMENT_TIME_SCALE[desired] || 1;
+            const base = a.__borrowed ? moveScale : 1;
+            a.timeScale = a.__reverse ? -base : base;
           }
+          if (a.__reverse) a.time = a.getClip().duration - 0.001;
         }
+        keyRef.current = animKey;
       }
-      keyRef.current = animKey;
     }
   });
 

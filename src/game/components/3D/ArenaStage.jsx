@@ -3,6 +3,51 @@ import { useMemo, useRef } from "react";
 import { useFrame, useLoader } from "@react-three/fiber";
 import * as THREE from "three";
 
+function useFloorTexture(stage) {
+  return useMemo(() => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 512;
+    canvas.height = 512;
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = stage.matColor;
+    ctx.fillRect(0, 0, 512, 512);
+    ctx.strokeStyle = "rgba(0,0,0,0.3)";
+    ctx.lineWidth = 3;
+    const tiles = 8;
+    const step = 512 / tiles;
+    for (let i = 0; i <= tiles; i++) {
+      ctx.beginPath(); ctx.moveTo(i * step, 0); ctx.lineTo(i * step, 512); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(0, i * step); ctx.lineTo(512, i * step); ctx.stroke();
+    }
+    for (let i = 0; i < 2500; i++) {
+      ctx.fillStyle = `rgba(255,255,255,${Math.random() * 0.04})`;
+      ctx.fillRect(Math.random() * 512, Math.random() * 512, 2, 2);
+    }
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(10, 7);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    return tex;
+  }, [stage.matColor]);
+}
+
+function FloorReflection({ bgTex }) {
+  const reflectedTex = useMemo(() => {
+    const t = bgTex.clone();
+    t.wrapT = THREE.RepeatWrapping;
+    t.repeat.y = -1;
+    t.offset.y = 1;
+    t.needsUpdate = true;
+    return t;
+  }, [bgTex]);
+  return (
+    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.015, -6]}>
+      <planeGeometry args={[40, 14]} />
+      <meshBasicMaterial map={reflectedTex} transparent opacity={0.16} depthWrite={false} />
+    </mesh>
+  );
+}
+
 export default function ArenaStage({ stage }) {
   const bgTex = useLoader(THREE.TextureLoader, stage.bg);
   useMemo(() => {
@@ -11,6 +56,8 @@ export default function ArenaStage({ stage }) {
       bgTex.wrapS = bgTex.wrapT = THREE.ClampToEdgeWrapping;
     }
   }, [bgTex]);
+
+  const floorTex = useFloorTexture(stage);
 
   // Exponential fog tuned per stage to blend the 3D floor into the 2D backdrop.
   const fogDensity = stage.fogDensity || 0.035;
@@ -28,8 +75,10 @@ export default function ArenaStage({ stage }) {
           Characters can walk anywhere on this plane. */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
         <planeGeometry args={[70, 44, 1, 1]} />
-        <meshStandardMaterial color={stage.tint} roughness={0.9} metalness={0.05} />
+        <meshStandardMaterial map={floorTex} color={stage.tint} roughness={0.85} metalness={0.1} />
       </mesh>
+
+      <FloorReflection bgTex={bgTex} />
 
       {stage.theme === "temple" && <TempleProps />}
       {stage.theme === "runes" && <RuneProps />}
@@ -37,9 +86,9 @@ export default function ArenaStage({ stage }) {
       {stage.theme === "hell" && <HellProps />}
       {stage.theme === "cage" && <CageProps />}
 
-      <ambientLight intensity={0.75} color={stage.ambient} />
+      <ambientLight intensity={0.95} color={stage.ambient} />
       {/* Tekken-style hard directional shadow cast straight onto the arena floor */}
-      <directionalLight position={[5, 12, 6]} intensity={1.15} color={stage.ambient}
+      <directionalLight position={[5, 12, 6]} intensity={1.35} color={stage.ambient}
         castShadow shadow-mapSize-width={2048} shadow-mapSize-height={2048}
         shadow-bias={-0.0004}
         shadow-camera-near={0.5} shadow-camera-far={40}
@@ -57,9 +106,9 @@ function TempleProps() {
   return (
     <>
       {/* Torii pillars */}
-      <mesh position={[-6, 3, -2]}><boxGeometry args={[0.5, 6, 0.5]} /><meshLambertMaterial color="#c81a1a" /></mesh>
-      <mesh position={[6, 3, -2]}><boxGeometry args={[0.5, 6, 0.5]} /><meshLambertMaterial color="#c81a1a" /></mesh>
-      <mesh position={[0, 6.2, -2]}><boxGeometry args={[13, 0.5, 0.6]} /><meshLambertMaterial color="#c81a1a" /></mesh>
+      <mesh position={[-6, 3, -2]} castShadow><boxGeometry args={[0.5, 6, 0.5]} /><meshLambertMaterial color="#c81a1a" /></mesh>
+      <mesh position={[6, 3, -2]} castShadow><boxGeometry args={[0.5, 6, 0.5]} /><meshLambertMaterial color="#c81a1a" /></mesh>
+      <mesh position={[0, 6.2, -2]} castShadow><boxGeometry args={[13, 0.5, 0.6]} /><meshLambertMaterial color="#c81a1a" /></mesh>
       {/* Lanterns */}
       <mesh position={[-4, 3.5, -1.5]}><boxGeometry args={[0.6, 0.8, 0.6]} /><meshBasicMaterial color="#ffb060" /></mesh>
       <mesh position={[4, 3.5, -1.5]}><boxGeometry args={[0.6, 0.8, 0.6]} /><meshBasicMaterial color="#ffb060" /></mesh>
@@ -115,7 +164,7 @@ function CathedralProps() {
   return (
     <>
       {[-6, -3, 3, 6].map((x) => (
-        <mesh key={x} position={[x, 4, -3]}>
+        <mesh key={x} position={[x, 4, -3]} castShadow>
           <boxGeometry args={[0.6, 8, 0.6]} /><meshLambertMaterial color="#5a5a68" />
         </mesh>
       ))}
@@ -133,8 +182,8 @@ function HellProps() {
   return (
     <>
       {[-4, 4].map((x) => (
-        <mesh key={x} position={[x, 5, -2]}>
-          <boxGeometry args={[0.15, 8, 0.15]} /><meshBasicMaterial color="#3a2a1a" />
+        <mesh key={x} position={[x, 5, -2]} castShadow>
+          <boxGeometry args={[0.15, 8, 0.15]} /><meshStandardMaterial color="#3a2a1a" roughness={0.7} />
         </mesh>
       ))}
       <pointLight color="#ff6020" position={[0, 0.5, 0]} intensity={3} distance={12} />
@@ -150,8 +199,8 @@ function CageProps() {
         const a = (i / bars) * Math.PI * 2;
         const r = 8;
         return (
-          <mesh key={i} position={[Math.cos(a) * r, 3, -Math.abs(Math.sin(a)) * 2 - 3]}>
-            <boxGeometry args={[0.08, 6, 0.08]} /><meshBasicMaterial color="#c8c8d0" />
+          <mesh key={i} position={[Math.cos(a) * r, 3, -Math.abs(Math.sin(a)) * 2 - 3]} castShadow>
+            <boxGeometry args={[0.08, 6, 0.08]} /><meshStandardMaterial color="#c8c8d0" roughness={0.4} metalness={0.6} />
           </mesh>
         );
       })}
